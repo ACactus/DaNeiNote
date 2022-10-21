@@ -4149,3 +4149,120 @@ Method类的每一个实例称为"方法对象"。
 都提供了一个方法:
 `boolean isAnnotationPresent(Class cls)`
 判断当前反射对象表示的内容是否被cls所表示的注解标注了。
+
+所有反射对象都支持方法`Annotation getAnnotation(Class cls)`获取cls类对象表示的注解
+
+### 注解参数
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface AutoRunMethod {
+    /*
+        注解中可以定义参数
+        格式为:
+        类型 参数名() [default 默认值]
+        默认值是可选的，不是必须指定的。如果指定了默认值，那么使用注解时
+        可以不传入该参数，此时参数使用这个默认值。
+        如果参数没有指定默认值，那么使用注解时必须为这个参数赋值。
+        如果注解中只有一个参数时，参数名建议选取"value"。这样外界在使用
+        该注解时，传递参数则不需要指定参数名，可以直接写作:
+        @AutoRunMethod(5)    此时value的值就是5
+
+        如果该参数名不叫value，比如叫:
+        int num() default 1;
+        则使用注解时为该参数传递值时必须写作:
+        @AutoRunMethod(num=5)
+
+     */
+    int value() default 1;
+
+    /*
+        一个注解中可以定义多个参数，当使用该注解时传参格式为:name=value
+        @AutoRunMethod(num=1,name="张三")
+        或
+        @AutoRunMethod(name="张三",num=1)    (传参顺序不所谓)
+
+     */
+//    int num() default 1;
+//    String name();
+    /*
+        并且两个以上参数(含两个)时，其中某一个参数名指定为value,传参时也
+        必须指定该参数名
+        例如:
+        @AutoRunMethod(value=1,name="张三")
+        或
+        @AutoRunMethod(name="张三",value=1)
+     */
+    //    int value() default 1;
+    //    String name();
+
+}
+```
+
+示例：
+
+* 定义`AutoRunClass`注解
+
+  ```java
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.TYPE)
+  public @interface AutoRunClass {
+  }
+  ```
+
+* 定义`AutoRunMethod`注解
+
+  ```java
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
+  public @interface AutoRunMethod {
+      int value() default 1;
+  }
+  ```
+
+* `Reflect.Person`类
+
+  ```java
+  package reflect;
+  
+  import reflect.annotations.AutoRunClass;
+  import reflect.annotations.AutoRunMethod;
+  
+  /**
+   * 使用当前类测试反射操作
+   */
+  @AutoRunClass
+  public class Person {
+      private String name = "张三";
+      private int age = 20;
+      public Person(){}
+  
+      public Person(String name, int age) {
+          this.name = name;
+          this.age = age;
+      }
+      @AutoRunMethod(8)
+      public void watchTV(){
+          System.out.println(name+"看电视");
+      }
+    
+  }
+  ```
+
+* 获取`Person`类中`watchTV()`方法上`AutoRunMethod`注解的参数
+
+  ```java
+  Class cls = Class.forName("reflect.Person");
+  if(cls.isAnnotationPresent(AutoRunClass.class)){
+      Method method = cls.getDeclaredMethod("watchTV");
+      if(method.isAnnotationPresent(AutoRunMethod.class)){
+          //返回当前method对象表示的方法"watchTV"上的注解@AutoRunMethod
+          AutoRunMethod arm = method.getAnnotation(AutoRunMethod.class);
+          int value = arm.value();
+          System.out.println("参数值:"+value);
+      }
+  }
+  ```
+
+  
