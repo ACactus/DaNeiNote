@@ -4305,4 +4305,155 @@ public @interface AutoRunMethod {
   }
   ```
 
+# 十一、JDBC
+
+  DBUtil类
+
+加入mysql驱动依赖
+
+```xml
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.15</version>
+</dependency>
+```
+
+  ```java
+  /**
+   * 数据库工具类，维护数据库驱动加载，连接的创建
+   */
+  public class DBUtil {
+      static {
+          try {
+              //DBUtil第一次被加载时，加载数据库驱动类
+              Class.forName("com.mysql.cj.jdbc.Driver");
+          } catch (ClassNotFoundException e) {
+              e.printStackTrace();
+          }
+      }
   
+      public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(
+               "jdbc:mysql://localhost:3306/tedu?characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true",
+               "root",
+               "root");
+      }
+  }
+  ```
+
+  * 使用示例
+  
+    ```sql
+    try (
+                 Connection connection = DBUtil.getConnection();
+            ){
+                Statement state = connection.createStatement();
+                String sql = "SELECT id,username,password,nickname,age " +
+                             "FROM userinfo " +
+                             "WHERE username='"+username+"' " +
+                             "AND password='"+password+"' ";
+                ResultSet rs = state.executeQuery(sql);
+    
+                if(rs.next()){//结果集中如果查询出来一条记录
+                    response.sendRedirect("/login_success.html");
+                }else{
+                    response.sendRedirect("/login_fail.html");
+                }catch (SQLException e) {
+                e.printStackTrace();
+            }
+    ```
+  
+    * `state.executeUpdate() `;
+    * `state.execute()`;
+    * `state.executeQuery()`
+
+  ## 使用数据库连接池
+
+在Maven中加入依赖
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.1.21</version>
+</dependency>
+```
+
+```sql
+/**
+ * 数据库工具类，维护数据库驱动加载，连接的创建
+ */
+public class DBUtil {
+    //阿里提供的连接池.连接池的主要作用:1重用连接 2控制连接数量
+    private static DruidDataSource dds;
+    static {
+        init();
+    }
+    private static void init(){
+        dds = new DruidDataSource();//实例化连接池
+        //设置连接池基本参数:数据库连接,用户名,密码,初始连接数,最大连接数等
+        dds.setUsername("root");//设置数据库用户名
+        dds.setPassword("root");//设置数据库密码
+        //设置数据库连接,阿里的连接池会根据该连接分析数据库并自行选择驱动类
+        dds.setUrl("jdbc:mysql://localhost:3306/tedu?characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true");
+        dds.setInitialSize(5);//设置初始连接数
+        dds.setMaxActive(20);//设置最大连接数
+    }
+
+    public static Connection getConnection() throws SQLException {
+      /*
+        连接池返回的连接是对驱动包中提供的连接的2次封装。
+        该连接的close()方法并非将连接关闭，而是将连接还给连接池。
+       */
+      return dds.getConnection();
+    }
+}
+```
+
+## 使用预编译SQL
+
+```
+* 执行预编译SQL语句
+* 优点:
+* 1:避免了繁琐的拼接SQL语文
+* 2:避免了被SQL注入的问题
+* 3:大批量执行相同语义的SQL(语义相同,值不同)时性能好
+*
+* 实际开发中我们的CRUD都建议使用预编译SQL来执行
+```
+
+```java
+public static void main(String[] args) {
+        try (
+                Connection conn = DBUtil.getConnection();
+        ){
+            //向userinfo表中插入数据
+            String sql = "INSERT INTO userinfo " +
+                         "(username,password,nickname,age) " +
+                         "VALUES " +
+                         "(?,?,?,?)";//预编译SQL中可以先用"?"代替值
+            /*
+                此时Connection会现将该SQL发送给数据库,使其生成该SQL的
+                执行计划,表明该SQL的语义.
+                数据库理解了,要向userinfo表插入数据,并且对4个字段插入内容
+                只不过该SQL不能真正执行,因为还没有数据.
+             */
+            PreparedStatement ps = conn.prepareStatement(sql);
+            //使用PreparedStatement为四个预留的"?"设置应有的值
+            ps.setString(1,"王克晶");//第1个?的值为字符串类型的"王克晶"
+            ps.setString(2,"123456");
+            ps.setString(3,"克晶");
+            ps.setInt(4,18);//第4个?的值为int类型的数字18
+            //此时执行时仅将4个?对应的值传递给数据库
+            int count = ps.executeUpdate();
+            if(count>0){
+                System.out.println("插入成功");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+```
+
