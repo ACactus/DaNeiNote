@@ -4457,3 +4457,323 @@ public static void main(String[] args) {
     }
 ```
 
+# 十二、Stream
+
+Stream流式思想类似于工厂车间的“生产流水线”，Stream流不是一种数据结构，不保存数据，而是对数据进行加工 处理。Stream可以看作是流水线上的一个工序。在流水线上，通过多个工序让一个原材料加工成一个商品。
+
+![image-20220402160126589](assets/1358881-20220402160127070-1615228060.png)
+
+![image-20220402160138379](assets/1358881-20220402160138576-1261512529.png)
+
+Stream API能让我们快速完成许多复杂的操作，如筛选、切片、映射、查找、去除重复，统计，匹配和归约。
+
+## 1.获取流
+
+1. Collection集合都可以通过stream默认方式获取流
+
+   * 首先， java.util.Collection 接口中加入了default方法 stream 用来获取流，所以其所有实现类均可获取流。
+
+     ```java
+     public interface Collection {
+         default Stream<E> stream()
+     }
+     ```
+
+     ```java
+     List<String> list = new ArrayList<>();
+     // ...
+     Stream<String> stream1 = list.stream();
+     ```
+
+   * `java.util.Map`接口不是Collection的子接口，所以获取对应的流要分key、value或entry等情况。
+
+     ```java
+     Map<String, String> map = new HashMap<>();
+     // ...
+     Stream<String> keyStream = map.keySet().stream();
+     Stream<String> valueStream = map.values().stream();
+     Stream<Map.Entry<String, String>> entryStream = map.entrySet().stream();
+     ```
+
+2. 使用Stream中的静态方法of获取流
+
+   ```java
+   Stream<String> stream6 = Stream.of("aa", "bb", "cc");
+   String[] arr = {"aa", "bb", "cc"};
+   Stream<String> stream7 = Stream.of(arr);
+   ```
+
+## 2.常用方法
+
+| 方法名  |  方法作用  | 返回值类型 | 方法种类 |
+| :-----: | :--------: | :--------: | :------: |
+|  count  |  统计个数  |    long    |   终结   |
+| forEach |  逐一处理  |    void    |   终结   |
+| filter  |    过滤    |   Stream   | 函数拼接 |
+|  limit  | 取用前几个 |   Stream   | 函数拼接 |
+|  skip   | 跳过前几个 |   Stream   | 函数拼接 |
+|   map   |    映射    |   Stream   | 函数拼接 |
+| concat  |    组合    |   Stream   | 函数拼接 |
+
+**终结方法**：返回值类型不再是`Stream` 类型的方法，不再支持链式调用。本小节中，终结方法包括`count `和`forEach` 方法。
+
+**非终结方法**：返回值类型仍然是Stream 类型的方法，支持链式调用。（除了终结方法外，其余方法均为非终结方法。）
+
+**注意**：
+
+1. Stream只能操作一次
+2. Stream方法返回的是新的流
+3. Stream不调用终结方法，中间的操作不会执行
+
+## 3. 常用方法介绍
+
+1. `forEach()`
+
+   方法声明：
+
+   ```java
+   void forEach(Consumer<? super T> action);
+   ```
+
+   该方法接收一个 Consumer 接口函数，会将每一个流元素交给该函数进行处理:
+
+   ```java
+   List<String> strings = Arrays.asList("尚进", "张金钟", "宝春意", "雷雪君");
+   Stream stream = strings.stream();
+   stream.forEach(new Consumer() {
+       @Override
+       public void accept(Object o) {
+           System.out.println(o);
+       }
+   });
+   
+   stream.forEach(s-> System.out.println(s));
+   ```
+
+2. `count()`方法
+
+   方法声明：
+   ```java
+   long count();
+   ```
+
+   该方法返回一个long值代表元素个数。
+
+   ```java
+   List<String> strings = Arrays.asList( "张三", "李四", "老八", "张金钟");
+   Stream stream = strings.stream();
+   System.out.println(stream.count());
+   ```
+
+3. `filter()`方法
+
+   方法声明
+
+   ```java
+   Stream<T> filter(Predicate<? super T> predicate);
+   ```
+
+   filter用于过滤数据，返回符合过滤条件的数据.
+
+   ```java
+   List<String> strings = Arrays.asList("张三", "李四", "老八", "张金钟");
+   Stream stream = strings.stream();
+   stream.filter(new Predicate() {
+       @Override
+       public boolean test(Object o) {
+           return !"张金钟".equals(o);//过滤掉"张金钟"
+       }
+   }).forEach(s-> System.out.println(s));
+   ```
+
+4. `limit()`方法
+
+   方法签名：
+
+   ```java
+   Stream<T> limit(long maxSize);
+   ```
+
+   limit 方法可以对流进行截取，只取用前n个
+
+   ```java
+   List<String> strings = Arrays.asList("张金钟","张三", "李四", "老八");
+   Stream stream = strings.stream();
+   stream.limit(3).forEach(System.out::println);
+   ```
+
+5. `skip()`方法
+
+   方法声明：
+
+   ```java
+   Stream<T> skip(long n);
+   ```
+
+   如果流的当前长度大于n，则跳过前n个；否则将会得到一个长度为0的空流。
+
+   ```java
+   List<String> strings = Arrays.asList("张金钟","张三", "李四", "老八");
+   Stream stream = strings.stream();
+   stream.skip(1).forEach(System.out::println);
+   ```
+
+6. `sorted()`方法
+
+   方法签名：
+
+   ```java
+   Stream<T> sorted();
+   Stream<T> sorted(Comparator<? super T> comparator);
+   ```
+
+   如果需要将数据排序，可以使用 sorted 方法。
+
+   ```java
+      Stream.of(33, 22, 11, 55)
+                              .sorted()
+                              .sorted((o1, o2) -> o2 - o1)
+                              .forEach(System.out::println);
+   ```
+
+7. `map()`方法
+
+   方法声明：
+
+   ```java
+   <R> Stream<R> map(Function<? super T, ? extends R> mapper);
+   ```
+
+   该接口需要一个 Function 函数式接口参数，可以将当前流中的T类型数据转换为另一种R类型的流。
+
+   Student类
+
+   ```java
+   public class Student {
+       public String name;
+       public int score;
+   
+       public Student(String name, int score) {
+           this.name = name;
+           this.score = score;
+       }
+   }
+   ```
+
+   ```java
+   List<Student> students = new ArrayList<>();
+   students.add(new Student("张金钟", 59));
+   students.add(new Student("张三", 100));
+   students.add(new Student("李四", 100));
+   students.add(new Student("老八", 100));
+   
+   Stream stream = students.stream();
+   //获取每个同学的分数并排序输出
+   stream.map(new Function() {
+       @Override
+       public Object apply(Object o) {
+           Student s = (Student) o;
+           return s.score;
+       }
+   }).sorted().forEach(System.out::println);
+   ```
+
+8. `distinct()`方法
+
+   ```java
+   Stream<T> distinct();
+   ```
+
+   去重。
+
+   自定义类型是根据对象的hashCode和equals来去除重复元素的。
+
+9. `match(）`方法
+
+   ```java
+   boolean allMatch(Predicate<? super T> predicate);
+   boolean anyMatch(Predicate<? super T> predicate);
+   boolean noneMatch(Predicate<? super T> predicate)
+   ```
+
+   如果需要判断数据是否匹配指定的条件，可以使用 Match 相关方法。
+
+   ```java
+   boolean b = Stream.of(5, 3, 6, 1)
+          // .allMatch(e -> e > 0); // allMatch: 元素是否全部满足条件
+          // .anyMatch(e -> e > 5); // anyMatch: 元素是否任意有一个满足条件
+          .noneMatch(e -> e < 0); // noneMatch: 元素是否全部不满足条件
+          System.out.println("b = " + b);
+   ```
+
+10. `concat()`
+
+    如果有两个流，希望合并成为一个流，那么可以使用 Stream 接口的静态方法 concat ：
+
+    ```java
+    static <T> Stream<T> concat(Stream<? extends T> a, Stream<? extends T> b)
+    ```
+
+    备注：这是一个静态方法，与 java.lang.String 当中的 concat 方法是不同的。
+
+    该方法的基本使用代码如：
+
+    ```java
+    @Test
+    public void testContact() {
+       Stream<String> streamA = Stream.of("张三");
+       Stream<String> streamB = Stream.of("李四");
+       Stream<String> result = Stream.concat(streamA, streamB);
+       result.forEach(System.out::println);
+    }
+    ```
+
+11. `reduce()`
+
+    如果需要将所有数据归纳得到一个数据，可以使用 reduce 方法。方法签名：
+
+    ```java
+    T reduce(T identity, BinaryOperator<T> accumulator);
+    ```
+
+    基本使用
+
+    Stream流中的 reduce 相关方法基本使用的代码如：
+
+    ```java
+    @Test
+    public void testReduce() {
+       int reduce = Stream.of(4, 5, 3, 9)
+                   .reduce(0, (a, b) -> {
+                           System.out.println("a = " + a + ", b = " + b);return a + b;
+                   });
+       // reduce:
+       // 第一次将默认做赋值给x, 取出第一个元素赋值给y,进行操作
+       // 第二次,将第一次的结果赋值给x, 取出二个元素赋值给y,进行操作
+       // 第三次,将第二次的结果赋值给x, 取出三个元素赋值给y,进行操作
+       // 第四次,将第三次的结果赋值给x, 取出四个元素赋值给y,进行操作
+       System.out.println("reduce = " + reduce);
+       // 化简
+       int reduce2 = Stream.of(4, 5, 3, 9)
+                           .reduce(0, (x, y) -> {return Integer.sum(x, y);});
+       // 进一步化简
+        int reduce3 = Stream.of(4, 5, 3, 9).reduce(0, Integer::sum);
+        
+       int max = Stream.of(4, 5, 3, 9)
+                       .reduce(0, (x, y) -> {
+                       return x > y ? x : y;
+                      });
+       System.out.println("max = " + max);
+    
+    }
+    ```
+
+    x = 0, y = 4
+    x = 4, y = 5
+    x = 9, y = 3
+    x = 12, y = 9
+    reduce = 21
+    max = 9
+
+    ![image-20220402150212388](assets/1358881-20220402150212757-1167685889.png)
+
