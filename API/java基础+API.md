@@ -83,6 +83,11 @@
                 InterClass ic = new InterClass();
                 ic.innerA = 10;//外部类可以通过内部类对象访问内部类成员变量
             }
+        
+            public static void main(String[] args) {
+                OutClass oc = new OutClass();
+                OutClass.InterClass ic = oc.new InterClass();//创建非静态内部类对象需要通过外部类对象创建
+            }
         }
         ```
 
